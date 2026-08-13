@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SharedDTOModel\SharedDTOModel.csproj" />
+    <ProjectReference Include="..\StudentDataAccessLayer\StudentDataAccessLayer.csproj" />
+  </ItemGroup>
+
 </Project>

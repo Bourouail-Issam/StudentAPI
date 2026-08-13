@@ -1,7 +1,14 @@
+using StudentAPIBusinessLayer;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 
+string _connectionString = builder.Configuration.GetConnectionString("StudentDB")
+    ?? throw new InvalidOperationException("Connection string 'StudentDB' not found in appsettings.");
+
+builder.Services.AddSingleton<IStudent>(sp => new Student(_connectionString));
+
+// Add services to the container
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
