@@ -15,6 +15,15 @@ namespace StudentAPIBusinessLayer
         {
             return await _studentData.GetAllStudentsAsync();
         }
+        public async Task<List<StudentDTO>> GetPassedStudentsAsync()
+        {
+            return await _studentData.GetPassedStudentsAsync();
+        }
+        public async Task<decimal> GetAverageGradeAsync()
+        {
+            return await _studentData.GetAverageGradeAsync();
+        }
+
 
     }
 }
