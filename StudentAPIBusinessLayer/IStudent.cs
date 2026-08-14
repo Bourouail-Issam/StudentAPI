@@ -7,5 +7,6 @@ namespace StudentAPIBusinessLayer
         Task<List<StudentDTO>> GetAllStudentsAsync();
         Task<List<StudentDTO>> GetPassedStudentsAsync();
         Task<decimal> GetAverageGradeAsync();
+        Task<StudentDTO> GetStudentByIDAsync(int studentID);
     }
 }

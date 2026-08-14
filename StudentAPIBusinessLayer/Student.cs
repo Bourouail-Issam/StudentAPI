@@ -23,7 +23,9 @@ namespace StudentAPIBusinessLayer
         {
             return await _studentData.GetAverageGradeAsync();
         }
-
-
+        public async Task<StudentDTO> GetStudentByIDAsync(int studentID)
+        {
+            return await _studentData.GetStudentByIDAsync(studentID);
+        }
     }
 }

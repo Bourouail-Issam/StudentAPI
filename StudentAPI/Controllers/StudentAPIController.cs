@@ -77,5 +77,32 @@ namespace StudentAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves a single student by their ID.
+        /// </summary>
+        /// <param name="id">The unique identifier of the student.</param>
+        /// <returns>The student data, 400 if the ID is invalid, or 404 if not found.</returns>
+        [HttpGet("{id:int}", Name = "GetStudentByID")]
+        [ProducesResponseType(typeof(StudentDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id)
+        {
+            try
+            {
+                StudentDTO student = await _student.GetStudentByIDAsync(id);
+                return Ok(student);
+            }
+            catch (SqlException ex) when (ex.Number == 50006)
+            {
+                return BadRequest($"{ex.Message}");
+            }
+            catch (SqlException ex) when (ex.Number == 50007)
+            {
+                return NotFound($"{ex.Message}");
+            }
+        }
+
     }
 }

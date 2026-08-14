@@ -12,6 +12,7 @@ namespace StudentDataAccessLayer
         {
             _connectionString = connectionString;
         }
+
         public async Task<List<StudentDTO>> GetAllStudentsAsync()
         {
             List<StudentDTO> students = new List<StudentDTO>();
@@ -39,7 +40,6 @@ namespace StudentDataAccessLayer
             
             return students;
         }
-
         public async Task<List<StudentDTO>> GetPassedStudentsAsync()
         {
             List<StudentDTO> Passedstudents = new List<StudentDTO>();
@@ -67,7 +67,6 @@ namespace StudentDataAccessLayer
 
             return Passedstudents;
         }
-
         public async Task<decimal> GetAverageGradeAsync()
         {
             decimal averageGrade = 0;
@@ -90,6 +89,32 @@ namespace StudentDataAccessLayer
                     averageGrade = Convert.ToDecimal(outputParam.Value);
             }
             return  averageGrade;
+        }
+        public async Task<StudentDTO> GetStudentByIDAsync(int studentID)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("usp_GetStudentByID", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlParameter inputParam = new SqlParameter("@StudentID", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Input,
+                    Value = studentID
+                };
+                cmd.Parameters.Add(inputParam);
+                await conn.OpenAsync();
+                using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                {
+                    await reader.ReadAsync();                    
+                    return new StudentDTO
+                    {
+                        StudentId = reader.GetInt32(reader.GetOrdinal("StudentId")),
+                        FullName = reader.GetString(reader.GetOrdinal("FullName")),
+                        Age = reader.GetInt32(reader.GetOrdinal("Age")),
+                        Grade = reader.GetInt32(reader.GetOrdinal("Grade"))
+                    };                  
+                }
+            }
         }
     }
 }
