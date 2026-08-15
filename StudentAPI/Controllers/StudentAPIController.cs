@@ -126,5 +126,32 @@ namespace StudentAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        /// <summary>
+        /// Updates an existing student's data.
+        /// </summary>
+        /// <param name="id">The ID of the student to update.</param>
+        /// <param name="updatedStudent">The updated student data.</param>
+        /// <returns>204 No Content on success, 400 if validation fails, or 404 if not found.</returns>
+        [HttpPut("{id:int}", Name = "UpdateStudent")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateStudentAsync(int id, StudentDTO updatedStudent)
+        {
+            try
+            {
+                await _student.UpdateStudentAsync(updatedStudent);
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (SqlException ex) when (ex.Number == 50007)
+            {
+                return NotFound(ex.Message);
+            }
+        }
     }
 }

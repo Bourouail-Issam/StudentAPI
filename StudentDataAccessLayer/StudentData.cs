@@ -116,7 +116,6 @@ namespace StudentDataAccessLayer
                 }
             }
         }
-
         public async Task<int> UpdateStudentAsync(StudentDTO UpdatedStudent)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
@@ -132,7 +131,6 @@ namespace StudentDataAccessLayer
                 return await cmd.ExecuteNonQueryAsync();
             }
         }
-
         public async Task<int> AddStudentAsync(StudentDTO student)
         {
             int NewStudentID = -1;

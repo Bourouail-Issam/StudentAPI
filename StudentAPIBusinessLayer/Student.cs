@@ -33,5 +33,10 @@ namespace StudentAPIBusinessLayer
             await entity.SaveAsync();
             return entity.StudentId;
         }
+        public async Task UpdateStudentAsync(StudentDTO dto)
+        {
+            StudentEntity entity = new StudentEntity(_studentData, dto, StudentEntity.enMode.Update);
+            await entity.SaveAsync();
+        }
     }
 }
