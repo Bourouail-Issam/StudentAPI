@@ -156,5 +156,30 @@ namespace StudentDataAccessLayer
             }
             return NewStudentID;
         }
+        public async Task<int> DeleteStudentAsync(int StudentId)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("usp_DeleteStudent", conn))
+            {
+                cmd.CommandType= CommandType.StoredProcedure;
+
+                SqlParameter inputParam = new SqlParameter("@StudentID", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Input,
+                    Value = StudentId
+                };
+                cmd.Parameters.Add(inputParam);
+
+                SqlParameter outputParam = new SqlParameter("@RowsAffected", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+                cmd.Parameters.Add(outputParam);
+
+                await conn.OpenAsync();
+                await cmd.ExecuteNonQueryAsync();
+                return outputParam.Value != DBNull.Value ? Convert.ToInt32(outputParam.Value) : 0;
+            }
+        }
     }
 }

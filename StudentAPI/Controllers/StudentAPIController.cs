@@ -153,5 +153,33 @@ namespace StudentAPI.Controllers
                 return NotFound(ex.Message);
             }
         }
+
+        /// <summary>
+        /// delete an existing student's data.
+        /// </summary>
+        /// <param name="id">The ID of the student to deleted.</param>
+        /// <returns>204 No Content on success, 400 if validation fails, or 404 if not found.</returns>
+        [HttpDelete("{id:int}", Name = "DeleteStudent")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<bool>> DeleteStudentAsync(int id)
+        {
+            try
+            {
+                bool deleted = await _student.DeleteStudentAsync(id);
+                return deleted ? NoContent() : NotFound($"Student with ID {id} not found.");
+            }
+            catch (ArgumentException ex)        
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (SqlException ex) when (ex.Number == 50007)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
     }
 }

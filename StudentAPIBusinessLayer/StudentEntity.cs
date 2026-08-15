@@ -47,14 +47,6 @@ namespace StudentAPIBusinessLayer
                 throw new ArgumentException("Grade must be between 0 and 100.");
         }
 
-        /// <summary>
-        /// Validates the StudentId before a Delete operation.
-        /// </summary>
-        private void _ValidateForDelete()
-        {
-            if (StudentId <= 0)
-                throw new ArgumentException("Invalid StudentID for delete operation.");
-        }
         #endregion
 
         #region CRUD Methods
@@ -67,8 +59,6 @@ namespace StudentAPIBusinessLayer
             return await _studentData.UpdateStudentAsync(currentData);
         }
         #endregion
-
-
         public async Task SaveAsync()
         {
             _ValidateForSave();

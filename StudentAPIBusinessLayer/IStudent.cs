@@ -10,5 +10,6 @@ namespace StudentAPIBusinessLayer
         Task<StudentDTO> GetStudentByIDAsync(int studentID);
         Task<int> AddStudentAsync(StudentDTO dto);
         Task UpdateStudentAsync(StudentDTO dto);
+        Task<bool> DeleteStudentAsync(int StudentId);
     }
 }

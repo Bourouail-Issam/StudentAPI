@@ -10,7 +10,6 @@ namespace StudentAPIBusinessLayer
         {
             _studentData = new StudentData(connectionString);
         }
-
         public async Task<List<StudentDTO>> GetAllStudentsAsync()
         {
             return await _studentData.GetAllStudentsAsync();
@@ -37,6 +36,14 @@ namespace StudentAPIBusinessLayer
         {
             StudentEntity entity = new StudentEntity(_studentData, dto, StudentEntity.enMode.Update);
             await entity.SaveAsync();
+        }
+        public async Task<bool> DeleteStudentAsync(int studentID)
+        {
+            if (studentID <= 0)
+                throw new ArgumentException("Invalid StudentID.");
+
+            int rowsAffected = await _studentData.DeleteStudentAsync(studentID);
+            return rowsAffected > 0;
         }
     }
 }
