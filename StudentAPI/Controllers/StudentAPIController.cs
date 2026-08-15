@@ -104,5 +104,27 @@ namespace StudentAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Adds a new student to the database.
+        /// </summary>
+        /// <param name="newStudent">The student data to add (FullName, Age, Grade).</param>
+        /// <returns>The created student with its assigned ID, or 400 if validation fails.</returns>
+        [HttpPost(Name = "AddStudent")]
+        [ProducesResponseType(typeof(StudentDTO), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<StudentDTO>> AddNewStudentAsync(StudentDTO newStudent)
+        {
+            try
+            {
+                newStudent.StudentId = await _student.AddStudentAsync(newStudent);
+                return CreatedAtRoute("GetStudentByID", new { id = newStudent.StudentId }, newStudent);
+            }
+            catch (ArgumentException ex) 
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

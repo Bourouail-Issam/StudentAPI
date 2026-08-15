@@ -90,7 +90,7 @@ namespace StudentDataAccessLayer
             }
             return  averageGrade;
         }
-        public async Task<StudentDTO> GetStudentByIDAsync(int studentID)
+        public async Task<StudentDTO> FindAsync(int studentID)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             using (SqlCommand cmd = new SqlCommand("usp_GetStudentByID", conn))
@@ -115,6 +115,48 @@ namespace StudentDataAccessLayer
                     };                  
                 }
             }
+        }
+
+        public async Task<int> UpdateStudentAsync(StudentDTO UpdatedStudent)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("usp_UpdateStudent", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UpdateStudentID", SqlDbType.Int).Value = UpdatedStudent.StudentId;
+                cmd.Parameters.Add("@FullName", SqlDbType.NVarChar, 100).Value = UpdatedStudent.FullName;
+                cmd.Parameters.Add("@Age", SqlDbType.Int).Value = UpdatedStudent.Age;
+                cmd.Parameters.Add("@Grade", SqlDbType.Int).Value = UpdatedStudent.Grade;
+
+                await conn.OpenAsync();
+                return await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        public async Task<int> AddStudentAsync(StudentDTO student)
+        {
+            int NewStudentID = -1;
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("usp_AddStudent", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@FullName", SqlDbType.NVarChar, 100).Value = student.FullName;
+                cmd.Parameters.Add("@Age",SqlDbType.Int).Value = student.Age;
+                cmd.Parameters.Add("@Grade", SqlDbType.Int).Value = student.Grade;
+
+                SqlParameter outputParam = new SqlParameter("@NewStudentID", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+                cmd.Parameters.Add(outputParam);
+
+                await conn.OpenAsync();
+                await cmd.ExecuteNonQueryAsync();
+
+                if (outputParam.Value != DBNull.Value)
+                    NewStudentID = Convert.ToInt32(outputParam.Value);
+            }
+            return NewStudentID;
         }
     }
 }
