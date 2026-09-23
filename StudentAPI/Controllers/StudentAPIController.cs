@@ -6,7 +6,7 @@ using StudentAPIBusinessLayer;
 
 namespace StudentAPI.Controllers
 {
-    [Route("api/StudentAPI")]
+    [Route("api/StudentsAPI")]
     [ApiController] // Marks the class as a Web API controller with enhanced features.
     [Produces("application/json")]
     public class StudentAPIController : ControllerBase
@@ -126,6 +126,7 @@ namespace StudentAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
+     
         /// <summary>
         /// Updates an existing student's data.
         /// </summary>
