@@ -2,7 +2,7 @@
 -- Stored Procedure : usp_DeleteStudent
 -- ============================================================
 CREATE PROCEDURE dbo.usp_DeleteStudent
-    @StudentID  INT,
+    @StudentID    INT,
     @RowsAffected INT OUTPUT
 AS
 BEGIN
@@ -10,26 +10,22 @@ BEGIN
     SET XACT_ABORT ON;
 
     IF (@StudentID IS NULL)
-    BEGIN
-        THROW 50008, 'StudentID cannot be Null', 1;
-    END;
+        THROW 50008, N'StudentID cannot be Null', 1;
 
-      IF (@StudentID <= 0)
+    IF (@StudentID <= 0)
     BEGIN
         DECLARE @ErrorMsg NVARCHAR(200);
-        SET @ErrorMsg = 'Not accepted ID : ' + CAST(@StudentID AS NVARCHAR(10));
+        SET @ErrorMsg = N'Not accepted ID : ' + CAST(@StudentID AS NVARCHAR(10));
         THROW 50006, @ErrorMsg, 1;
     END;
 
- -- ==========================================
-    -- 2) Execution inside a Transaction + Error Handling
-    --    (existence check happens here, right before delete,
-    --     to avoid a race condition with the earlier pre-check)
-    -- ==========================================
+    DECLARE @DeletedUserIds TABLE (UserId INT);
+
     BEGIN TRY
         BEGIN TRANSACTION;
 
         DELETE FROM dbo.Students
+        OUTPUT DELETED.UserId INTO @DeletedUserIds
         WHERE StudentId = @StudentID;
 
         SET @RowsAffected = @@ROWCOUNT;
@@ -37,9 +33,12 @@ BEGIN
         IF (@RowsAffected = 0)
         BEGIN
             DECLARE @ErrorMsg2 NVARCHAR(200);
-            SET @ErrorMsg2 = 'Student with ID : ' + CAST(@StudentID AS NVARCHAR(10)) + ' is not found';
+            SET @ErrorMsg2 = N'Student with ID : ' + CAST(@StudentID AS NVARCHAR(10)) + N' is not found';
             THROW 50007, @ErrorMsg2, 1;
         END;
+
+        DELETE FROM dbo.Users
+        WHERE UserId IN (SELECT UserId FROM @DeletedUserIds WHERE UserId IS NOT NULL);
 
         COMMIT TRANSACTION;
     END TRY
