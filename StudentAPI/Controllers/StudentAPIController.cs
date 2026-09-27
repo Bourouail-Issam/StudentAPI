@@ -114,12 +114,13 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDTO>> AddNewStudentAsync(StudentDTO newStudent)
+        public async Task<ActionResult<StudentDTO>> AddNewStudentAsync([FromBody] RegisterStudentRequest request)
         {
             try
             {
-                newStudent.StudentId = await _student.AddStudentAsync(newStudent);
-                return CreatedAtRoute("GetStudentByID", new { id = newStudent.StudentId }, newStudent);
+                request.Student.StudentId = await _student.AddStudentAsync(request.Student, request.User);
+                return CreatedAtRoute("GetStudentByID",
+                    new { id = request.Student.StudentId }, request.Student);
             }
             catch (ArgumentException ex) 
             {

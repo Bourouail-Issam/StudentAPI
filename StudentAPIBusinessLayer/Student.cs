@@ -26,9 +26,9 @@ namespace StudentAPIBusinessLayer
         {
             return await _studentData.FindAsync(studentID);
         }
-        public async Task<int> AddStudentAsync(StudentDTO dto)
+        public async Task<int> AddStudentAsync(StudentDTO dto, UserDTO user)
         {
-            StudentEntity entity = new StudentEntity(_studentData,dto ,StudentEntity.enMode.AddNew);
+            StudentEntity entity = new StudentEntity(_studentData,dto, user ,StudentEntity.enMode.AddNew);
             await entity.SaveAsync();
             return entity.StudentId;
         }

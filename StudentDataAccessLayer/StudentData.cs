@@ -131,28 +131,37 @@ namespace StudentDataAccessLayer
                 return await cmd.ExecuteNonQueryAsync();
             }
         }
-        public async Task<int> AddStudentAsync(StudentDTO student)
+        public async Task<int> AddStudentAsync(StudentDTO student, UserDTO user)
         {
             int NewStudentID = -1;
             using (SqlConnection conn = new SqlConnection(_connectionString))
-            using (SqlCommand cmd = new SqlCommand("usp_AddStudent", conn))
+            using (SqlCommand cmd = new SqlCommand("usp_RegisterStudent", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@FullName", SqlDbType.NVarChar, 100).Value = student.FullName;
                 cmd.Parameters.Add("@Age",SqlDbType.Int).Value = student.Age;
                 cmd.Parameters.Add("@Grade", SqlDbType.Int).Value = student.Grade;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 150).Value = user.Email;
+                cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, 512).Value = user.PasswordHash;
+                cmd.Parameters.Add("@Role", SqlDbType.NVarChar, 30).Value = user.Role;
 
-                SqlParameter outputParam = new SqlParameter("@NewStudentID", SqlDbType.Int)
+                SqlParameter outputParam1 = new SqlParameter("@NewStudentID", SqlDbType.Int)
                 {
                     Direction = ParameterDirection.Output
                 };
-                cmd.Parameters.Add(outputParam);
+                cmd.Parameters.Add(outputParam1);
+
+                SqlParameter outputParam2 = new SqlParameter("@NewUserID", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+                cmd.Parameters.Add(outputParam2);
 
                 await conn.OpenAsync();
                 await cmd.ExecuteNonQueryAsync();
 
-                if (outputParam.Value != DBNull.Value)
-                    NewStudentID = Convert.ToInt32(outputParam.Value);
+                if (outputParam1.Value != DBNull.Value && outputParam2.Value != DBNull.Value)
+                    NewStudentID = Convert.ToInt32(outputParam1.Value);
             }
             return NewStudentID;
         }
