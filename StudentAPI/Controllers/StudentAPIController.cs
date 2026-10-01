@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using SharedDTOModel;
@@ -25,6 +26,7 @@ namespace StudentAPI.Controllers
         [HttpGet("All", Name ="GetAllStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<StudentDTO>>> GetAllStudentsAsync()
         {
@@ -45,6 +47,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(typeof(IEnumerable<StudentDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<StudentDTO>>> GetPassedStudentsAsync()
         {
             List<StudentDTO> passesStudentsList = await _student.GetPassedStudentsAsync();
@@ -64,6 +67,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(typeof(decimal), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize]
         public async Task<ActionResult<decimal>> GetAverageGradeAsync()
         {
             try
@@ -86,6 +90,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(typeof(StudentDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id)
         {
@@ -114,6 +119,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize]
         public async Task<ActionResult<StudentDTO>> AddNewStudentAsync([FromBody] RegisterStudentRequest request)
         {
             try
@@ -139,6 +145,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize]
         public async Task<IActionResult> UpdateStudentAsync(int id, StudentDTO updatedStudent)
         {
             try
@@ -166,6 +173,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize]
         public async Task<ActionResult<bool>> DeleteStudentAsync(int id)
         {
             try

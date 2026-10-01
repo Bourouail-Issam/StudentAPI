@@ -12,16 +12,14 @@ namespace SharedDTOModel
         public  string Email { get; set; } = string.Empty;
         public  string PasswordHash { get; set; } = string.Empty;
         public  string Role { get; set; } = string.Empty;
-        public int? StudentId { get; set; }
 
         public UserDTO() { }
-        public UserDTO(int id, string email, string passwordHash, string role, int studentId)
+        public UserDTO(int UserId, string email, string passwordHash, string role)
         {
-            this.UserId = id;
+            this.UserId = UserId;
             this.Email = email;
             this.PasswordHash = passwordHash;
             this.Role = role;
-            this.StudentId = studentId;
         }
          
     }

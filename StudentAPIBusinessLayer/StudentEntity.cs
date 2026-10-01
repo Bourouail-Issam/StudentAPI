@@ -25,8 +25,10 @@ namespace StudentAPIBusinessLayer
         public string PasswordHash { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
 
+        private readonly IPasswordHasher _passwordHasher;
 
-        public StudentEntity(StudentData studentData, StudentDTO dto, enMode mode)
+        public StudentEntity(StudentData studentData, StudentDTO dto, enMode mode,
+            IPasswordHasher passwordHasher)
         {
             this._studentData = studentData;
             this.StudentId = dto.StudentId;
@@ -34,8 +36,10 @@ namespace StudentAPIBusinessLayer
             this.Age = dto.Age;
             this.Grade = dto.Grade;
             this._mode = mode;
+            this._passwordHasher = passwordHasher;
         }
-        public StudentEntity(StudentData studentData, StudentDTO dto,UserDTO user , enMode mode)
+        public StudentEntity(StudentData studentData, StudentDTO dto,UserDTO user ,
+            enMode mode, IPasswordHasher passwordHasher)
         {
             this._studentData = studentData;  
             this.StudentId = dto.StudentId;
@@ -47,6 +51,7 @@ namespace StudentAPIBusinessLayer
             this.PasswordHash = user.PasswordHash;
             this.Role = user.Role;
             this._mode = mode;
+            this._passwordHasher = passwordHasher;
         }
 
         #region Validate Methods
@@ -84,7 +89,7 @@ namespace StudentAPIBusinessLayer
         #region CRUD Methods
         private async Task _AddNewStudent(StudentDTO currentData, UserDTO userData)
         {
-            userData.PasswordHash = PasswordHasher.HashPassword(this.PasswordHash);
+            userData.PasswordHash = _passwordHasher.HashPassword(this.PasswordHash);
             this.StudentId = await _studentData.AddStudentAsync(currentData, userData);
         }
         private async Task<int> _UpdateStudent(StudentDTO currentData)
@@ -102,7 +107,7 @@ namespace StudentAPIBusinessLayer
             switch (_mode)
             {
                 case enMode.AddNew:
-                    UserDTO userData = new UserDTO(UserId, Email, PasswordHash, Role, StudentId);
+                    UserDTO userData = new UserDTO(UserId, Email, PasswordHash, Role);
                     await _AddNewStudent(currentData, userData);
                     break;
 

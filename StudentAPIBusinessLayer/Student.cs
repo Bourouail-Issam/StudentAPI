@@ -6,9 +6,11 @@ namespace StudentAPIBusinessLayer
     public class Student : IStudent
     {
         private readonly StudentData _studentData;
-        public Student(string connectionString)
+        private readonly IPasswordHasher _passwordHasher;
+        public Student(string connectionString, IPasswordHasher passwordHasher)
         {
             _studentData = new StudentData(connectionString);
+            _passwordHasher = passwordHasher;
         }
         public async Task<List<StudentDTO>> GetAllStudentsAsync()
         {
@@ -28,13 +30,17 @@ namespace StudentAPIBusinessLayer
         }
         public async Task<int> AddStudentAsync(StudentDTO dto, UserDTO user)
         {
-            StudentEntity entity = new StudentEntity(_studentData,dto, user ,StudentEntity.enMode.AddNew);
+            StudentEntity entity = new StudentEntity(_studentData,dto, user ,
+                StudentEntity.enMode.AddNew, _passwordHasher);
+
             await entity.SaveAsync();
             return entity.StudentId;
         }
         public async Task UpdateStudentAsync(StudentDTO dto)
         {
-            StudentEntity entity = new StudentEntity(_studentData, dto, StudentEntity.enMode.Update);
+            StudentEntity entity = new StudentEntity(_studentData, dto, 
+                StudentEntity.enMode.Update, _passwordHasher);
+
             await entity.SaveAsync();
         }
         public async Task<bool> DeleteStudentAsync(int studentID)
