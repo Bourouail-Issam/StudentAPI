@@ -11,7 +11,7 @@ namespace StudentApi.Controllers
 {
     // This controller is responsible for authentication-related actions,
     // such as logging in and issuing JWT tokens.
-    [Route("StudentApi/Auth")]
+    [Route("Api/Auth")]
     [ApiController]
     [Produces("application/json")]
 

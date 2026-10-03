@@ -1,7 +1,7 @@
 -- ============================================================
 -- Stored Procedure : usp_DeleteStudent
 -- ============================================================
-CREATE PROCEDURE dbo.usp_DeleteStudent
+CREATE PROCEDURE dbo.usp_DeleteStudent_V2
     @StudentID    INT,
     @RowsAffected INT OUTPUT
 AS
