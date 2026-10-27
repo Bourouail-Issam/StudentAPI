@@ -49,5 +49,38 @@ namespace StudentDataAccessLayer
                 }
             }
         }
+
+        public async Task<UserDTO?> GetUserByIdAsync(int userId)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("usp_GetUserById", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlParameter inputParam = new SqlParameter("@userID", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Input,
+                    Value = userId
+                };
+
+                cmd.Parameters.Add(inputParam);
+                await conn.OpenAsync();
+
+                using (SqlDataReader dr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!await dr.ReadAsync())
+                        return null;
+                    else
+                        return new UserDTO
+                        {
+                            UserId = dr.GetInt32(dr.GetOrdinal("UserId")),
+                            Email = dr.GetString(dr.GetOrdinal("Email")),
+                            PasswordHash = dr.GetString(dr.GetOrdinal("PasswordHash")),
+                            Role = dr.GetString(dr.GetOrdinal("Role")),
+                        };
+
+
+                }
+            }
+        }
     }
 }

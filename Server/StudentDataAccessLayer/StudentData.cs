@@ -30,6 +30,7 @@ namespace StudentDataAccessLayer
                         students.Add(new StudentDTO
                             (
                                 reader.GetInt32(reader.GetOrdinal("StudentId")),
+                                reader.GetInt32(reader.GetOrdinal("UserId")),
                                 reader.GetString(reader.GetOrdinal("FullName")),
                                 reader.GetInt32(reader.GetOrdinal("Age")),
                                 reader.GetInt32(reader.GetOrdinal("Grade"))
@@ -57,6 +58,7 @@ namespace StudentDataAccessLayer
                         Passedstudents.Add(new StudentDTO
                             (
                                 reader.GetInt32(reader.GetOrdinal("StudentId")),
+                                reader.GetInt32(reader.GetOrdinal("UserId")),
                                 reader.GetString(reader.GetOrdinal("FullName")),
                                 reader.GetInt32(reader.GetOrdinal("Age")),
                                 reader.GetInt32(reader.GetOrdinal("Grade"))
@@ -109,6 +111,7 @@ namespace StudentDataAccessLayer
                     return new StudentDTO
                     {
                         StudentId = reader.GetInt32(reader.GetOrdinal("StudentId")),
+                        UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
                         FullName = reader.GetString(reader.GetOrdinal("FullName")),
                         Age = reader.GetInt32(reader.GetOrdinal("Age")),
                         Grade = reader.GetInt32(reader.GetOrdinal("Grade"))

@@ -6,7 +6,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT StudentId, FullName, Age, Grade
+    SELECT StudentId, UserId,FullName, Age, Grade
     FROM dbo.Students
     ORDER BY StudentId;
 END;

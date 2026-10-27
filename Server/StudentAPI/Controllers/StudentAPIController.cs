@@ -4,9 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using SharedDTOModel;
 using StudentAPIBusinessLayer;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace StudentAPI.Controllers
 {
+    [Authorize]
     [Route("api/StudentsAPI")]
     [ApiController] // Marks the class as a Web API controller with enhanced features.
     [Produces("application/json")]
@@ -26,8 +29,8 @@ namespace StudentAPI.Controllers
         [HttpGet("All", Name ="GetAllStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [Authorize]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize(Roles = "Owner")]
         public async Task<ActionResult<IEnumerable<StudentDTO>>> GetAllStudentsAsync()
         {
             List<StudentDTO> students = await _student.GetAllStudentsAsync();
@@ -43,11 +46,11 @@ namespace StudentAPI.Controllers
         /// Retrieves all Passed students from the database.
         /// </summary>
         /// <returns>A list of all Passed students, or 404 if none exist.</returns>
+        [AllowAnonymous]
         [HttpGet("Passed", Name = "GetPassedStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [Authorize]
         public async Task<ActionResult<IEnumerable<StudentDTO>>> GetPassedStudentsAsync()
         {
             List<StudentDTO> passesStudentsList = await _student.GetPassedStudentsAsync();
@@ -63,11 +66,11 @@ namespace StudentAPI.Controllers
         /// Retrive Average Grade of All Student from database.
         /// </summary>
         /// <returns>The average grade of all students, or 404 if no students exist.</returns>
+        [AllowAnonymous]
         [HttpGet("AverageGrade", Name = "GetAverageGrade")]
         [ProducesResponseType(typeof(decimal), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [Authorize]
         public async Task<ActionResult<decimal>> GetAverageGradeAsync()
         {
             try
@@ -90,13 +93,21 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(typeof(StudentDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [Authorize]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id)
+        public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id, [FromServices] IAuthorizationService authorizationService)
         {
             try
             {
+                if (id <= 0)
+                    return BadRequest($"Not accepted ID {id}");
+
                 StudentDTO student = await _student.GetStudentByIDAsync(id);
+             
+                var authResult = await authorizationService.AuthorizeAsync(User, id, "StudentOwnerOrAdmin");
+
+                if (!authResult.Succeeded)
+                    return Forbid(); // 403
+
                 return Ok(student);
             }
             catch (SqlException ex) when (ex.Number == 50006)
@@ -114,12 +125,12 @@ namespace StudentAPI.Controllers
         /// </summary>
         /// <param name="newStudent">The student data to add (FullName, Age, Grade).</param>
         /// <returns>The created student with its assigned ID, or 400 if validation fails.</returns>
+        [Authorize(Roles = "Owner")]
         [HttpPost(Name = "AddStudent")]
         [ProducesResponseType(typeof(StudentDTO), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [Authorize]
         public async Task<ActionResult<StudentDTO>> AddNewStudentAsync([FromBody] RegisterStudentRequest request)
         {
             try
@@ -133,19 +144,19 @@ namespace StudentAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
-     
+
         /// <summary>
         /// Updates an existing student's data.
         /// </summary>
         /// <param name="id">The ID of the student to update.</param>
         /// <param name="updatedStudent">The updated student data.</param>
         /// <returns>204 No Content on success, 400 if validation fails, or 404 if not found.</returns>
+        [Authorize(Roles = "Owner")]
         [HttpPut("{id:int}", Name = "UpdateStudent")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [Authorize]
         public async Task<IActionResult> UpdateStudentAsync(int id, StudentDTO updatedStudent)
         {
             try
@@ -168,12 +179,12 @@ namespace StudentAPI.Controllers
         /// </summary>
         /// <param name="id">The ID of the student to deleted.</param>
         /// <returns>204 No Content on success, 400 if validation fails, or 404 if not found.</returns>
+        [Authorize(Roles = "Owner")]
         [HttpDelete("{id:int}", Name = "DeleteStudent")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [Authorize]
         public async Task<ActionResult<bool>> DeleteStudentAsync(int id)
         {
             try

@@ -64,10 +64,8 @@ namespace StudentApi.Controllers
                 // Unique identifier for the student
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
 
-
                 // Student email address
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-
 
                 // Role (Student or Admin) used later for authorization
                 new Claim(ClaimTypes.Role, user.Role)

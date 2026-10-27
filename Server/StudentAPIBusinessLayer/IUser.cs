@@ -10,5 +10,6 @@ namespace StudentAPIBusinessLayer
     public interface IUser
     {
         Task<UserDTO?> GetUserByEmailAsync(string Email);
+        Task<UserDTO?> GetUserByIdAsync(int userId);
     }
 }

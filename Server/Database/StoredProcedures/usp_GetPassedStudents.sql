@@ -11,7 +11,7 @@ BEGIN
         THROW 50004, 'No Students Found!', 1;
     END
 
-    SELECT StudentId, FullName, Age, Grade
+    SELECT StudentId,UserId,FullName, Age, Grade
     FROM dbo.Students
     WHERE Grade >= 50
     ORDER BY StudentId;

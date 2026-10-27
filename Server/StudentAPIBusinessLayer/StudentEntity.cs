@@ -32,6 +32,7 @@ namespace StudentAPIBusinessLayer
         {
             this._studentData = studentData;
             this.StudentId = dto.StudentId;
+            this.UserId = dto.UserId;
             this.FullName = dto.FullName;
             this.Age = dto.Age;
             this.Grade = dto.Grade;
@@ -42,11 +43,11 @@ namespace StudentAPIBusinessLayer
             enMode mode, IPasswordHasher passwordHasher)
         {
             this._studentData = studentData;  
-            this.StudentId = dto.StudentId;
+            this.StudentId = 0;
             this.FullName = dto.FullName;
             this.Age = dto.Age;
             this.Grade = dto.Grade;
-            this.UserId = user.UserId;
+            this.UserId = 0;
             this.Email = user.Email;
             this.PasswordHash = user.PasswordHash;
             this.Role = user.Role;
@@ -102,7 +103,7 @@ namespace StudentAPIBusinessLayer
         public async Task SaveAsync()
         {
             _ValidateForSave();
-            StudentDTO currentData = new StudentDTO(StudentId, FullName, Age, Grade);                
+            StudentDTO currentData = new StudentDTO(StudentId,UserId,FullName, Age, Grade);                
 
             switch (_mode)
             {

@@ -1,8 +1,12 @@
-using System.Text;
-using StudentAPIBusinessLayer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using StudentAPI;
+using StudentAPI.Authorization;
+using StudentAPIBusinessLayer;
+using System.Security.Claims;
+using System.Text;
 
 // Create the application builder.
 // This object is responsible for configuring services and middleware.
@@ -13,10 +17,13 @@ string _connectionString = builder.Configuration["ConnectionStrings:StudentDB"]
 
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
-builder.Services.AddSingleton<IStudent>(sp => 
-            new Student(_connectionString, sp.GetRequiredService<IPasswordHasher>()));
+builder.Services.AddSingleton<IStudent>(sp =>  new Student(_connectionString,
+    sp.GetRequiredService<IPasswordHasher>()));
 
 builder.Services.AddSingleton<IUser>(sp => new User(_connectionString));
+
+// Register the Handler in program.cs
+builder.Services.AddSingleton<IAuthorizationHandler, StudentOwnerOrAdminHandler>();
 
 // ===============================
 // JWT Authentication Configuration
@@ -41,6 +48,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
     });
 
 // ===============================
@@ -96,10 +105,6 @@ builder.Services.AddSwaggerGen(option =>
     });
 });
 
-
-
-
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("StudentApiCorsPolicy", policy =>
@@ -112,6 +117,12 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("StudentOwnerOrAdmin", policy =>
+        policy.Requirements.Add(new StudentOwnerOrAdminRequirement()));
 });
 
 var app = builder.Build();

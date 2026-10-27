@@ -19,5 +19,10 @@ namespace StudentAPIBusinessLayer
         {
             return await _userData.GetUserByEmailAsync(Email);
         }
+
+        public async Task<UserDTO?> GetUserByIdAsync(int id)
+        {
+            return await _userData.GetUserByIdAsync(id);
+        }
     }
 }

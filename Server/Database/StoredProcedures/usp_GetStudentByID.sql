@@ -21,7 +21,7 @@ BEGIN
         THROW 50007, @ErrorMsg2, 1;
     END;
 
-    SELECT StudentId, FullName, Age, Grade  
+    SELECT StudentId,UserId,FullName, Age, Grade  
     FROM dbo.Students
     WHERE StudentId = @StudentID;
 
