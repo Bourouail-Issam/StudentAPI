@@ -15,14 +15,19 @@ namespace StudentAPIBusinessLayer
         {
             _userData = new UserData(connectionString);
         }
-        public async Task<UserDTO?> GetUserByEmailAsync(string Email)
-        {
-            return await _userData.GetUserByEmailAsync(Email);
-        }
+        public Task<UserDTO?> GetUserByEmailAsync(string email)
+              => _userData.GetUserByEmailAsync(email);
 
-        public async Task<UserDTO?> GetUserByIdAsync(int id)
-        {
-            return await _userData.GetUserByIdAsync(id);
-        }
+        public Task<UserDTO?> GetUserByIdAsync(int userId)
+            => _userData.GetUserByIdAsync(userId);
+
+        public Task SaveRefreshTokenAsync(int userId, string refreshTokenHash, DateTime expiresAtUtc)
+            => _userData.SaveRefreshTokenAsync(userId, refreshTokenHash, expiresAtUtc);
+
+        public Task<UserDTO?> RotateRefreshTokenAsync(string oldHash, string newHash, DateTime newExpiresAtUtc)
+            => _userData.RotateRefreshTokenAsync(oldHash, newHash, newExpiresAtUtc);
+
+        public Task RevokeRefreshTokenAsync(int userId)
+            => _userData.RevokeRefreshTokenAsync(userId);
     }
 }

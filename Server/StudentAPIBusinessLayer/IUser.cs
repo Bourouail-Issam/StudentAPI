@@ -11,5 +11,8 @@ namespace StudentAPIBusinessLayer
     {
         Task<UserDTO?> GetUserByEmailAsync(string Email);
         Task<UserDTO?> GetUserByIdAsync(int userId);
+        Task SaveRefreshTokenAsync(int userId, string refreshTokenHash, DateTime expiresAtUtc);
+        Task<UserDTO?> RotateRefreshTokenAsync(string oldHash, string newHash, DateTime newExpiresAtUtc);
+        Task RevokeRefreshTokenAsync(int userId);
     }
 }

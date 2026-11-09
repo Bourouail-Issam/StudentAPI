@@ -1,10 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using StudentAPI.Model;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using StudentAPI.Auth;
 using StudentAPIBusinessLayer;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 
 
 namespace StudentApi.Controllers
@@ -17,15 +16,32 @@ namespace StudentApi.Controllers
 
     public class AuthController : ControllerBase
     {
-        private readonly IUser _User;
+        // Used to equalize response time when the email does not exist
+        private static readonly string DummyPasswordHash =
+            new PasswordHasher().HashPassword("dummy-password-for-timing");
+
+        private readonly IUser _user;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly IRefreshTokenService _refreshTokenService;
+        private readonly IJwtTokenService _jwtTokenService;
         private readonly IConfiguration _configuration;
-        public AuthController(IUser user, IPasswordHasher passwordHasher, IConfiguration configuration)
+
+        public AuthController(
+            IUser user, 
+            IPasswordHasher passwordHasher,
+            IRefreshTokenService refreshTokenService,
+            IJwtTokenService jwtTokenService,
+            IConfiguration configuration)
         {
-            _User= user;
+            _user= user;
             _passwordHasher = passwordHasher;
+            _refreshTokenService = refreshTokenService;
+            _jwtTokenService = jwtTokenService;
             _configuration = configuration;
         }
+
+        private int RefreshTokenDays =>
+         _configuration.GetValue<int?>("Jwt:RefreshTokenDays") ?? 7;
 
         // This endpoint handles user login.
         // It verifies credentials and returns a JWT token if login succeeds.
@@ -37,78 +53,80 @@ namespace StudentApi.Controllers
         {
             // Step 1: Find the student by email from the in- DataBase
             // Email acts as the unique login identifier.
-            var user = await _User.GetUserByEmailAsync(request.Email);
+            var user = await _user.GetUserByEmailAsync(request.Email);
 
 
             // If no student is found with the given email,
             // return 401 Unauthorized without revealing which field was wrong.
             if (user == null)
-                return Unauthorized("Invalid credentials");
-
-
-            // Step 2: Verify the provided password against the stored hash.
-
-            bool isValidPassword = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
-
-
-            // If the password does not match the stored hash,
-            // return 401 Unauthorized.
-            if (!isValidPassword)
-                return Unauthorized("Invalid credentials");
-
-
-            // Step 3: Create claims that represent the authenticated user's identity.
-            // These claims will be embedded inside the JWT.
-            var claims = new[]
             {
-                // Unique identifier for the student
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+                _passwordHasher.VerifyPassword(request.Password, DummyPasswordHash);
+                return Unauthorized("Invalid credentials");
 
-                // Student email address
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            }
 
-                // Role (Student or Admin) used later for authorization
-                new Claim(ClaimTypes.Role, user.Role)
-            };
+            if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+                return Unauthorized("Invalid credentials");
 
+            var accessToken = _jwtTokenService.CreateAccessToken(user.UserId,user.Email,user.Role);
+            var refreshToken = _refreshTokenService.GenerateRefreshToken();
 
-            // Step 4: the symmetric security key used to sign the JWT.
-            // This key must match the key used in JWT validation middleware.
-            var jwtKey = _configuration["Jwt:Key"]
-                ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+            await _user.SaveRefreshTokenAsync(
+                user.UserId,
+                _refreshTokenService.HashRefreshToken(refreshToken),
+                DateTime.UtcNow.AddDays(RefreshTokenDays));
 
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)) ;
-
-
-            // Step 5: Define the signing credentials.
-            // This specifies the algorithm used to sign the token.
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-
-            // Step 6: Create the JWT token.
-            // The token includes issuer, audience, claims, expiration, and signature.
-            var issuer = _configuration["Jwt:Issuer"] 
-                ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
-
-            var audience = _configuration["Jwt:Audience"] 
-                ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(30),
-                signingCredentials: creds
+            // The RAW refresh token goes to the client; only its hash is stored
+            return Ok(new TokenResponse
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                }
             );
+        }
 
+        [HttpPost("refresh")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+                return BadRequest("Refresh token is required.");
 
-            // Step 7: Return the serialized JWT token to the client.
-            // The client will send this token with future requests.
-            return Ok(new
-            {
-                token = new JwtSecurityTokenHandler().WriteToken(token)
+            var oldHash = _refreshTokenService.HashRefreshToken(request.RefreshToken);
+
+            var newRefreshToken = _refreshTokenService.GenerateRefreshToken();
+
+            var user = await _user.RotateRefreshTokenAsync(
+                 oldHash, newRefreshToken, DateTime.UtcNow.AddDays(RefreshTokenDays));
+
+            if (user == null)
+                return Unauthorized("Invalid refresh token");
+
+            var accessToken = _jwtTokenService.CreateAccessToken(user.UserId, user.Email, user.Role);
+
+            return Ok(new TokenResponse
+            { 
+                AccessToken = accessToken,
+                RefreshToken = newRefreshToken
             });
+        }
+
+
+        [Authorize]
+        [HttpPost("logout")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Logout()
+        {
+            var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+            if (!int.TryParse(sub, out int userId))
+                return Unauthorized();
+
+            await _user.RevokeRefreshTokenAsync(userId);
+            return NoContent();
         }
     }
 }

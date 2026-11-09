@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using StudentAPI;
+using StudentAPI.Auth;
 using StudentAPI.Authorization;
 using StudentAPIBusinessLayer;
 using System.Security.Claims;
@@ -17,13 +18,16 @@ string _connectionString = builder.Configuration["ConnectionStrings:StudentDB"]
 
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
-builder.Services.AddSingleton<IStudent>(sp =>  new Student(_connectionString,
+builder.Services.AddScoped<IStudent>(sp =>  new Student(_connectionString,
     sp.GetRequiredService<IPasswordHasher>()));
 
-builder.Services.AddSingleton<IUser>(sp => new User(_connectionString));
+builder.Services.AddScoped<IUser>(sp => new User(_connectionString));
 
 // Register the Handler in program.cs
 builder.Services.AddSingleton<IAuthorizationHandler, StudentOwnerOrAdminHandler>();
+
+builder.Services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 // ===============================
 // JWT Authentication Configuration
@@ -57,7 +61,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // ===============================
 // Register authorization services.
 // This enables attributes like [Authorize] and role-based authorization.
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("StudentOwnerOrAdmin", policy =>
+        policy.Requirements.Add(new StudentOwnerOrAdminRequirement()));
+});
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -119,11 +127,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("StudentOwnerOrAdmin", policy =>
-        policy.Requirements.Add(new StudentOwnerOrAdminRequirement()));
-});
+
 
 var app = builder.Build();
 

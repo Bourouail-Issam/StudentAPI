@@ -13,13 +13,24 @@ namespace SharedDTOModel
         public  string PasswordHash { get; set; } = string.Empty;
         public  string Role { get; set; } = string.Empty;
 
+        // Refresh token fields
+        public string? RefreshTokenHash { get; set; }
+        public DateTime? RefreshTokenExpiresAt { get; set; }
+        public DateTime? RefreshTokenRevokedAt { get; set; }
+
         public UserDTO() { }
-        public UserDTO(int UserId, string email, string passwordHash, string role)
+        public UserDTO(int userId, string email, string passwordHash, string role,
+                 string? refreshTokenHash = null,
+                 DateTime? refreshTokenExpiresAt = null, 
+                 DateTime? refreshTokenRevokedAt = null)
         {
-            this.UserId = UserId;
-            this.Email = email;
-            this.PasswordHash = passwordHash;
-            this.Role = role;
+            UserId = userId;
+            Email = email;
+            PasswordHash = passwordHash;
+            Role = role;
+            RefreshTokenHash = refreshTokenHash ?? string.Empty;
+            RefreshTokenExpiresAt = refreshTokenExpiresAt;
+            RefreshTokenRevokedAt = refreshTokenRevokedAt;
         }
          
     }
