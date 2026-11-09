@@ -8,6 +8,9 @@ CREATE TABLE Users
     Email        NVARCHAR(150) NOT NULL,
     PasswordHash NVARCHAR(512) NOT NULL,
     [Role]       NVARCHAR(30)  NOT NULL CONSTRAINT DF_Users_Role DEFAULT ('Student'),
+    RefreshTokenHash      VARCHAR(44)  NULL,
+    RefreshTokenExpiresAt DATETIME2(7) NULL,
+    RefreshTokenRevokedAt DATETIME2(7) NULL,
 
     CONSTRAINT PK_Users PRIMARY KEY (UserId),
     CONSTRAINT UQ_Users_Email UNIQUE (Email),
@@ -19,6 +22,10 @@ ON dbo.Users([Role]);
 GO
 CREATE INDEX IX_Users_Role_Email
 ON dbo.Users([Role], Email);
+GO
+
+CREATE INDEX IX_Users_RefreshTokenHash
+ON dbo.Users(RefreshTokenHash);
 GO
 
 -- ============================================================

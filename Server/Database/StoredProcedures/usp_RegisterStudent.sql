@@ -1,7 +1,7 @@
 -- ============================================================
 -- Stored Procedure : usp_RegisterStudent
 -- ============================================================
-CREATE PROCEDURE dbo.usp_RegisterStudent
+CREATE OR ALTER PROCEDURE dbo.usp_RegisterStudent
     @FullName      NVARCHAR(100),
     @Age           INT,
     @Grade         INT,
@@ -33,7 +33,7 @@ BEGIN
     IF (@PasswordHash IS NULL OR LTRIM(RTRIM(@PasswordHash)) = '')
         THROW 50011, N'PasswordHash cannot be empty.', 1;
   
-    IF (@Role NOT IN ('Owner', 'Manager', 'Admin', 'Student', 'Teacher'))
+    IF (@Role IS NULL OR @Role NOT IN ('Owner', 'Manager', 'Admin', 'Student', 'Teacher'))
         THROW 50012, N'Invalid Role value.', 1;
 
     BEGIN TRY
@@ -52,7 +52,11 @@ BEGIN
     BEGIN CATCH
         IF (XACT_STATE()) <> 0
             ROLLBACK TRANSACTION;
+
+        IF ERROR_NUMBER() IN (2601, 2627)
+            THROW 50009, N'Email is already registered.', 1;
         THROW;
     END CATCH
 END;
 GO
+
