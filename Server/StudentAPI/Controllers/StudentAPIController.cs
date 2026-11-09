@@ -94,7 +94,8 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id, [FromServices] IAuthorizationService authorizationService)
+        public async Task<ActionResult<StudentDTO>> GetStudentByIDAsync(int id,
+            [FromServices] IAuthorizationService authorizationService)
         {
             try
             {
@@ -103,7 +104,7 @@ namespace StudentAPI.Controllers
 
                 StudentDTO student = await _student.GetStudentByIDAsync(id);
              
-                var authResult = await authorizationService.AuthorizeAsync(User, id, "StudentOwnerOrAdmin");
+                var authResult = await authorizationService.AuthorizeAsync(User, student.UserId, "StudentOwnerOrAdmin");
 
                 if (!authResult.Succeeded)
                     return Forbid(); // 403
@@ -161,8 +162,18 @@ namespace StudentAPI.Controllers
         {
             try
             {
+                if (id <= 0)
+                    return BadRequest($"Not accepted ID {id}");
+
+                if (updatedStudent.StudentId != id)
+                    return BadRequest("Route id does not match body StudentId.");
+
                 await _student.UpdateStudentAsync(updatedStudent);
                 return NoContent();
+            }
+            catch (SqlException ex) when (ex.Number == 50009)
+            {
+                return Conflict(ex.Message); // 409: email already registered
             }
             catch (ArgumentException ex)
             {
@@ -185,7 +196,7 @@ namespace StudentAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> DeleteStudentAsync(int id)
+        public async Task<ActionResult> DeleteStudentAsync(int id)
         {
             try
             {

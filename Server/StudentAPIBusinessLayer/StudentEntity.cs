@@ -88,14 +88,14 @@ namespace StudentAPIBusinessLayer
         #endregion
 
         #region CRUD Methods
-        private async Task _AddNewStudent(StudentDTO currentData, UserDTO userData)
+        private async Task _AddNewStudent(StudentDTO studentData, UserDTO userData)
         {
             userData.PasswordHash = _passwordHasher.HashPassword(this.PasswordHash);
-            this.StudentId = await _studentData.AddStudentAsync(currentData, userData);
+            this.StudentId = await _studentData.AddStudentAsync(studentData, userData);
         }
-        private async Task<int> _UpdateStudent(StudentDTO currentData)
+        private async Task<int> _UpdateStudent(StudentDTO studentData)
         {
-            return await _studentData.UpdateStudentAsync(currentData);
+            return await _studentData.UpdateStudentAsync(studentData);
         }
 
         
@@ -103,17 +103,17 @@ namespace StudentAPIBusinessLayer
         public async Task SaveAsync()
         {
             _ValidateForSave();
-            StudentDTO currentData = new StudentDTO(StudentId,UserId,FullName, Age, Grade);                
+            StudentDTO studentData = new StudentDTO(StudentId,UserId,FullName, Age, Grade);                
 
             switch (_mode)
             {
                 case enMode.AddNew:
-                    UserDTO userData = new UserDTO(UserId, Email, PasswordHash, Role);
-                    await _AddNewStudent(currentData, userData);
+                    UserDTO userData = new UserDTO(UserId, Email, PasswordHash, Role, null, null, null);
+                    await _AddNewStudent(studentData, userData);
                     break;
 
                 case enMode.Update:
-                    await _UpdateStudent(currentData);
+                    await _UpdateStudent(studentData);
                     break;
             }
         }

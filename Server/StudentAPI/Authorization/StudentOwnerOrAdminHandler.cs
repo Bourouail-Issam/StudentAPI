@@ -4,7 +4,7 @@ using System.Security.Claims;
 
 // This authorization handler enforces the ownership rule for student resources.
 // It checks whether the current user is either:
-// - An Admin (full access), OR
+// - An Owner (full access), OR
 // - The owner of the student record being requested
 
 namespace StudentAPI.Authorization
@@ -12,8 +12,10 @@ namespace StudentAPI.Authorization
     public class StudentOwnerOrAdminHandler
         : AuthorizationHandler<StudentOwnerOrAdminRequirement,int>
     {
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
-                StudentOwnerOrAdminRequirement requirement,int studentId)
+        protected override Task HandleRequirementAsync(
+            AuthorizationHandlerContext context,
+            StudentOwnerOrAdminRequirement requirement,
+            int ownerUserId)
         {
             // Admin override
             if (context.User.IsInRole("Owner"))
@@ -23,10 +25,10 @@ namespace StudentAPI.Authorization
             }
 
             // Ownership check
-            var userId = context.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var sub = context.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-            if (int.TryParse(userId, out int authenticatedStudentId) &&
-                authenticatedStudentId == studentId)
+            if (int.TryParse(sub, out int authenticatedStudentId) &&
+                authenticatedStudentId == ownerUserId)
             {
                 context.Succeed(requirement);
             }
