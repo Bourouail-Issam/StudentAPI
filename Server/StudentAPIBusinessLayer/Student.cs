@@ -16,18 +16,22 @@ namespace StudentAPIBusinessLayer
         {
             return await _studentData.GetAllStudentsAsync();
         }
+
         public async Task<List<StudentDTO>> GetPassedStudentsAsync()
         {
             return await _studentData.GetPassedStudentsAsync();
         }
+
         public async Task<decimal> GetAverageGradeAsync()
         {
             return await _studentData.GetAverageGradeAsync();
         }
+
         public async Task<StudentDTO> GetStudentByIDAsync(int studentID)
         {
             return await _studentData.FindAsync(studentID);
         }
+
         public async Task<int> AddStudentAsync(StudentDTO dto, UserDTO user)
         {
             StudentEntity entity = new StudentEntity(_studentData,dto, user ,
@@ -36,6 +40,7 @@ namespace StudentAPIBusinessLayer
             await entity.SaveAsync();
             return entity.StudentId;
         }
+
         public async Task UpdateStudentAsync(StudentDTO dto)
         {
             StudentEntity entity = new StudentEntity(_studentData, dto, 
@@ -43,6 +48,7 @@ namespace StudentAPIBusinessLayer
 
             await entity.SaveAsync();
         }
+
         public async Task<bool> DeleteStudentAsync(int studentID)
         {
             if (studentID <= 0)
