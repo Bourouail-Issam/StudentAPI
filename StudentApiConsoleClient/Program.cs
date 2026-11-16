@@ -1,60 +1,88 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Net.Security;
+using System.Threading.Tasks;
 
 namespace StudentApiConsoleClient
 {
-    internal class Program
+    class Program
     {
         // ==========================
-        // Configuration
+        // Configuration Section
         // ==========================
-        // Base URL of the secured Student API
         private const string BaseUrl = "https://localhost:7221/";
 
-        // Test credentials that already exist in the API
-        private const string Email = "ali.ahmed@student.com";
-        private const string Password = "password1";
+        // Use an existing account from your in-memory data store
+        // (You said you switched to an admin user)
+        private const string Email = "issambourouail@gmail.com";
+        private const string Password = "1234567809";
+
+        // How long we wait between calls to force access token expiry.
+        // (Set your API access token expiry to ~10 seconds to see refresh easily.)
+        private const int WaitSecondsBeforeSecondCall = 15;
 
         static async Task Main(string[] args)
         {
-            Console.WriteLine("=== Student API Console Client (JWT) ===");
+            Console.WriteLine("=== Student API Console Client (Access + Refresh Tokens) ===");
             Console.WriteLine();
 
-            // Create an HttpClient configured for local HTTPS development
             using var http = CreateHttpClientForLocalDev(BaseUrl);
 
-            // Step 1: Login and retrieve JWT
-            var token = await LoginAndGetTokenAsync(http, Email, Password);
+            // 1) Login to get AccessToken + RefreshToken
+            var tokenPair = await LoginAsync(http, Email, Password);
 
-            if (string.IsNullOrWhiteSpace(token))
+            if (tokenPair == null ||
+                string.IsNullOrWhiteSpace(tokenPair.AccessToken) ||
+                string.IsNullOrWhiteSpace(tokenPair.RefreshToken))
             {
                 Console.WriteLine("Login failed.");
                 return;
             }
 
+            // Store tokens in a single mutable object (no ref/out; async-friendly)
+            var tokenState = new TokenState(tokenPair.AccessToken, tokenPair.RefreshToken);
+
+
             Console.WriteLine("Login succeeded.");
-            Console.WriteLine($"Token (first 30 chars): {token[..30]}...");
+            Console.WriteLine("======================================");
+            Console.WriteLine("Initial Tokens:");
+            Console.WriteLine("======================================");
+
+            Console.WriteLine($"Access Token:\n{tokenState.AccessToken}");
+            Console.WriteLine();
+            Console.WriteLine($"Refresh Token:\n{tokenState.RefreshToken}");
+            Console.WriteLine("======================================");
             Console.WriteLine();
 
 
-            // Step 2: Call secured endpoint WITHOUT token
-            Console.WriteLine("Calling GET /api/Students/All WITHOUT token...");
-            await CallGetAllStudentsAsync(http, null);
+            // 2) First secured call (expected 200)
+            Console.WriteLine("First call: GET /api/StudentsAPI/All (expected 200)...");
+            await CallGetAllStudentsWithAutoRefreshAsync(http, Email, tokenState);
+
+            // 3) Wait to let access token expire (same run, no restart)
+            Console.WriteLine();
+            Console.WriteLine($"Waiting {WaitSecondsBeforeSecondCall} seconds to let the access token expire...");
+            await Task.Delay(TimeSpan.FromSeconds(WaitSecondsBeforeSecondCall));
+            Console.WriteLine("Wait done.");
             Console.WriteLine();
 
-            // Step 3: Call secured endpoint WITH token
-            Console.WriteLine("Calling GET /api/Students/All WITH token...");
-            await CallGetAllStudentsAsync(http, token);
-            Console.WriteLine();
+            // 4) Second secured call (expected 401 then refresh then 200)
+            Console.WriteLine("Second call: GET /api/StudentsAPI/All (expected 401 -> refresh -> 200)...");
+            await CallGetAllStudentsWithAutoRefreshAsync(http, Email, tokenState);
 
+            Console.WriteLine();
+            Console.WriteLine("Done.");
         }
 
         // ==========================
         // Helper Methods
         // ==========================
+
+        // Creates an HttpClient for local HTTPS development (self-signed dev cert support).
         static HttpClient CreateHttpClientForLocalDev(string baseUrl)
         {
             var handler = new HttpClientHandler
@@ -71,7 +99,10 @@ namespace StudentApiConsoleClient
             };
         }
 
-        static async Task<string> LoginAndGetTokenAsync(HttpClient http, string email, string password)
+        // --------------------------
+        // Login: returns AccessToken + RefreshToken
+        // --------------------------
+        static async Task<TokenResponse?> LoginAsync(HttpClient http, string email, string password)
         {
             var request = new LoginRequest
             {
@@ -84,34 +115,124 @@ namespace StudentApiConsoleClient
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
                 Console.WriteLine("Invalid credentials.");
-                return "";
+                return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"Login failed: {response.StatusCode}");
-                return "";
+                return null;
             }
 
-            var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            return tokenResponse?.Token ?? "";
+            return await response.Content.ReadFromJsonAsync<TokenResponse>();
         }
 
-        static async Task CallGetAllStudentsAsync(HttpClient http, string? token)
+        // --------------------------
+        // Refresh: returns NEW AccessToken + NEW RefreshToken (rotation)
+        // --------------------------
+        static async Task<TokenResponse?> RefreshTokensAsync(HttpClient http,
+            string refreshToken)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, "api/StudentsAPI/All");
-
-            if (!string.IsNullOrWhiteSpace(token))
+            var request = new RefreshRequest
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-            
+                RefreshToken = refreshToken
+            };
 
-            var response = await http.SendAsync(request);
+            var response = await http.PostAsJsonAsync("/api/Auth/refresh", request);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                Console.WriteLine("401 Unauthorized");
+                Console.WriteLine("Refresh failed: Unauthorized (refresh token invalid/expired/revoked).");
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Refresh failed: {response.StatusCode}");
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<TokenResponse>();
+        }
+
+        // --------------------------
+        // Sends a request with AccessToken.
+        // If 401 happens, refreshes tokens once and retries the request one time.
+        // --------------------------
+        static async Task<HttpResponseMessage> SendWithAutoRefreshAsync(
+            HttpClient http,
+            HttpRequestMessage request,
+            string email,
+            TokenState tokenState)
+        {
+            // First attempt with current access token
+            ApplyBearerToken(request, tokenState.AccessToken);
+            var response = await http.SendAsync(request);
+
+            // If not 401, return immediately
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
+                return response;
+
+            // 401 => access token expired/invalid => try refresh once
+            Console.WriteLine("Access token rejected (401). Refreshing tokens...");
+
+            response.Dispose();
+
+            var newTokens = await RefreshTokensAsync(http, tokenState.RefreshToken);
+            if (newTokens == null ||
+                string.IsNullOrWhiteSpace(newTokens.AccessToken) ||
+                string.IsNullOrWhiteSpace(newTokens.RefreshToken))
+            {
+                // Refresh failed => force re-login scenario
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            }
+
+            // Update stored tokens (rotation)
+            tokenState.AccessToken = newTokens.AccessToken;
+            tokenState.RefreshToken = newTokens.RefreshToken;
+
+            Console.WriteLine("Refresh succeeded. Retrying the original request...");
+            Console.WriteLine("======================================");
+            Console.WriteLine("NEW TOKENS RECEIVED AFTER REFRESH:");
+            Console.WriteLine("======================================");
+
+            Console.WriteLine($"New Access Token:\n{tokenState.AccessToken}");
+            Console.WriteLine();
+            Console.WriteLine($"New Refresh Token:\n{tokenState.RefreshToken}");
+
+            Console.WriteLine("======================================");
+            Console.WriteLine();
+
+
+            // Retry the original request once with new access token
+            using var retryRequest = CloneRequest(request);
+            ApplyBearerToken(retryRequest, tokenState.AccessToken);
+
+            return await http.SendAsync(retryRequest);
+        }
+
+        // --------------------------
+        // Example secured call: GET /api/StudentsAPI/All
+        // Uses auto-refresh helper
+        // --------------------------
+        static async Task CallGetAllStudentsWithAutoRefreshAsync(
+            HttpClient http,
+            string email,
+            TokenState tokenState)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/StudentsAPI/All");
+
+            var response = await SendWithAutoRefreshAsync(http, request, email, tokenState);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Console.WriteLine("401 Unauthorized. Access token expired and refresh failed (need re-login).");
+                return;
+            }
+
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                Console.WriteLine("403 Forbidden. You are authenticated, but not allowed to do this action.");
                 return;
             }
 
@@ -122,44 +243,105 @@ namespace StudentApiConsoleClient
             }
 
             var students = await response.Content.ReadFromJsonAsync<List<StudentDto>>();
-
-            if (students != null)
+            if (students == null)
             {
-                Console.WriteLine($"{students.Count} students returned:");
-                foreach (var s in students)
-                {
-                    Console.WriteLine($"- {s.FullName} (Age: {s.Age}, Grade: {s.Grade})");
-                }
+                Console.WriteLine("No data returned.");
+                return;
             }
+
+            Console.WriteLine($"{students.Count} students returned:");
+            foreach (var s in students)
+            {
+                Console.WriteLine($"- {s.Name} (Age: {s.Age}, Grade: {s.Grade})");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("======================================");
+            Console.WriteLine("Current Token State After Request:");
+            Console.WriteLine("======================================");
+
+            Console.WriteLine($"Access Token:\n{tokenState.AccessToken}");
+            Console.WriteLine();
+            Console.WriteLine($"Refresh Token:\n{tokenState.RefreshToken}");
+
+            Console.WriteLine("======================================");
+            Console.WriteLine();
+
         }
 
-        // ==========================
-        // DTOs
-        // ==========================
-
-        class LoginRequest
+        // --------------------------
+        // Token utilities
+        // --------------------------
+        static void ApplyBearerToken(HttpRequestMessage request, string accessToken)
         {
-            [Required]
-            [EmailAddress]
-            public string Email { get; set; } = string.Empty;
-
-            [Required]
-            public string Password { get; set; } = string.Empty;
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         }
 
-        class TokenResponse
+        // HttpRequestMessage cannot be re-sent once sent, so we clone it for retry.
+        // For GET calls, this is enough. For POST/PUT with body, you'd need to recreate content too.
+        static HttpRequestMessage CloneRequest(HttpRequestMessage original)
         {
-            [Required]
-            public string Token { get; set; } = string.Empty;
+            var clone = new HttpRequestMessage(original.Method, original.RequestUri);
+
+            foreach (var header in original.Headers)
+                clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+            // Content is not used for GET here, but we copy if present.
+            // Note: some HttpContent types are single-use; for robust POST/PUT retries,
+            // recreate content from the original payload instead of copying.
+            if (original.Content != null)
+                clone.Content = original.Content;
+
+            return clone;
         }
 
-        class StudentDto
+        static string Preview(string value, int count)
         {
-            public int StudentId { get; set; }
-            public required string FullName { get; set; } = string.Empty;
-            public int Age { get; set; }
-            public int Grade { get; set; }
+            if (string.IsNullOrEmpty(value)) return "";
+            return value.Length <= count ? value : value.Substring(0, count) + "...";
         }
     }
 
+    // ==========================
+    // Token State (mutable, async-safe)
+    // ==========================
+    class TokenState
+    {
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+
+        public TokenState(string accessToken, string refreshToken)
+        {
+            AccessToken = accessToken;
+            RefreshToken = refreshToken;
+        }
+    }
+
+    // ==========================
+    // DTOs
+    // ==========================
+    class LoginRequest
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    class RefreshRequest
+    {
+        public string RefreshToken { get; set; } = "";
+    }
+
+    class TokenResponse
+    {
+        public string AccessToken { get; set; } = "";
+        public string RefreshToken { get; set; } = "";
+    }
+
+    class StudentDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public int Age { get; set; }
+        public int Grade { get; set; }
+    }
 }

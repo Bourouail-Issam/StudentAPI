@@ -24,7 +24,7 @@ namespace StudentAPI.Auth
             var audience = _configuration["Jwt:Audience"]
                 ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 
-            int minutes = _configuration.GetValue<int?>("Jwt:AccessTokenMinutes") ?? 30;
+            int minutes = _configuration.GetValue<int?>("Jwt:AccessTokenMinutes") ?? 3;
 
             // Step: Create claims that represent the authenticated user's identity.
             // These claims will be embedded inside the JWT.
