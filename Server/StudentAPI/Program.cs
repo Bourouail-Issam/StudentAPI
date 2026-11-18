@@ -8,6 +8,8 @@ using StudentAPI.Authorization;
 using StudentAPIBusinessLayer;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 // Create the application builder.
 // This object is responsible for configuring services and middleware.
@@ -28,6 +30,30 @@ builder.Services.AddSingleton<IAuthorizationHandler, StudentOwnerOrAdminHandler>
 
 builder.Services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+// =============
+// RateLimiting
+// =============
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("AuthLimiter", httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+    });
+});
+
+
 
 // ===============================
 // JWT Authentication Configuration
@@ -146,7 +172,17 @@ if (app.Environment.IsDevelopment())
 // Redirect HTTP requests to HTTPS.
 app.UseHttpsRedirection();
 app.UseCors("StudentApiCorsPolicy");
+app.UseRateLimiter();
 
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == StatusCodes.Status429TooManyRequests)
+    {
+        await context.Response.WriteAsync("Too many login attempts. Please try again later.");
+    }
+});
 // IMPORTANT:
 // Authentication middleware must run BEFORE authorization middleware.
 // Authentication identifies the user.
